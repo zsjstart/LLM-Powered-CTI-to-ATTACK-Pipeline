@@ -57,18 +57,6 @@ Raw CTI reports are divided into paragraph-level units to:
 
 The LLM extracts explicit adversary behaviors from CTI paragraphs.
 
-Example extracted behaviors:
-
-```json
-{
-  "behaviors": [
-    "identified and exploited vulnerable web servers of targeted organizations to install web shells",
-    "used stolen legitimate credentials to compromise externally facing Outlook Web Access (OWA) resources",
-    "performed credential harvesting outside of a compromised entity's environment to avoid detection"
-  ]
-}
-```
-
 ---
 
 ### 3. Behavior Refinement
@@ -79,6 +67,31 @@ The extracted behaviors are refined per paragraph to:
 * filter vague or non-operational behaviors,
 * reduce strategic or contextual noise,
 * preserve ATT&CK-relevant operational semantics.
+
+
+#### Example: Paragraph-Level Refinement
+
+Input CTI paragraph:
+
+```text id="n1r7uo"
+APT39 was created to bring together previous activities and methods used by this actor, and its activities largely align with a group publicly referred to as "Chafer." However, there are differences in what has been publicly reported due to the variances in how organizations track activity. APT39 primarily leverages the SEAWEED and CACHEMONEY backdoors along with a specific variant of the POWBAT backdoor. While APT39's targeting scope is global, its activities are concentrated in the Middle East. APT39 has prioritized the telecommunications sector, with additional targeting of the travel industry and IT firms that support it and the high-tech industry.
+```
+
+Initially extracted behaviors:
+
+```text id="h3q2xp"
+- APT39 primarily leverages the SEAWEED and CACHEMONEY backdoors along with a specific variant of the POWBAT backdoor
+- APT39 has prioritized the telecommunications sector, with additional targeting of the travel industry and IT firms that support it and the high-tech industry
+- While APT39's targeting scope is global, its activities are concentrated in the Middle East
+```
+
+Refined ATT&CK-oriented behaviors:
+
+```text id="z6m4lk"
+- APT39 primarily leverages the SEAWEED and CACHEMONEY backdoors along with a specific variant of the POWBAT backdoor
+```
+
+This example illustrates how the refinement stage removes targeting information, geopolitical context, and narrative CTI content while preserving operationally meaningful ATT&CK-relevant adversary behaviors.
 
 
 ---
@@ -143,7 +156,7 @@ For example, given the CTI report:
 /Data/CTI_report_01.pdf
 ```
 
-the framework extracts 18 adversary behaviors covering all behaviors manually identified by domain experts.
+the framework extracts 17 adversary behaviors covering all behaviors manually identified by domain experts.
 
 The remaining differences mainly arise because human experts typically prioritize highly concrete operational intrusion procedures, while LLMs may additionally retain broader adversary operations or higher-level ATT&CK-relevant behaviors.
 
@@ -230,7 +243,7 @@ This project currently explores:
 ---
 
 ## Limitations
-* inability to extract graph-based CTI behaviors
+* Inability to extract graph-based CTI behaviors
 * Performance may vary depending on:
 
   * CTI writing style,

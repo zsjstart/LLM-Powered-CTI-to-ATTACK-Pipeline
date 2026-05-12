@@ -4,6 +4,8 @@ import re
 import argparse
 from multi_llm import call_llm
 from json_repair import repair_json
+from pathlib import Path
+from typing import Optional, Union
 
 
 def extract_and_fix_json(text):
@@ -58,22 +60,109 @@ Do not add extra text
 """
 
 
-def read_data(file_path, text_column="text", label_column="label", limit=None):
-    data = []
+def read_data(
+    file_path,
+    text_column="text",
+    label_column="label",
+    limit=None
+):
 
-    with open(file_path, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
+    file_path = Path(file_path)
 
-        for i, row in enumerate(reader):
-            behavior = row[text_column].strip()
-            label = row[label_column].strip()
+    if not file_path.exists():
+        raise FileNotFoundError(f"File not found: {file_path}")
+
+    suffix = file_path.suffix.lower()
+
+    # ========================================================
+    # CSV INPUT
+    #
+    # Expected format:
+    #
+    # text,label
+    # behavior text,TXXXX
+    # ========================================================
+
+    if suffix == ".csv":
+
+        data = []
+
+        with open(file_path, "r", encoding="utf-8") as f:
+
+            reader = csv.DictReader(f)
+
+            for i, row in enumerate(reader):
+
+                behavior = row.get(text_column, "").strip()
+
+                # Optional label
+                label = row.get(label_column, "").strip()
+
+                data.append((behavior, label))
+
+                if limit is not None and i + 1 >= limit:
+                    break
+
+        return data
+
+    # ========================================================
+    # JSON INPUT
+    #
+    # Expected format:
+    #
+    # {
+    #   "behaviors": [
+    #       "behavior text 1",
+    #       "behavior text 2"
+    #   ]
+    # }
+    # ========================================================
+
+    elif suffix == ".json":
+
+        with open(file_path, "r", encoding="utf-8") as f:
+            raw_data = json.load(f)
+
+        if "behaviors" not in raw_data:
+
+            raise ValueError(
+                "JSON must contain a 'behaviors' field"
+            )
+
+        behaviors = raw_data["behaviors"]
+
+        if not isinstance(behaviors, list):
+
+            raise ValueError(
+                "'behaviors' must be a list"
+            )
+
+        data = []
+
+        for i, behavior in enumerate(behaviors):
+
+            behavior = str(behavior).strip()
+
+            # No labels in JSON format
+            label = ""
 
             data.append((behavior, label))
 
-            if limit and i + 1 >= limit:
+            if limit is not None and i + 1 >= limit:
                 break
 
-    return data
+        return data
+
+    # ========================================================
+    # UNSUPPORTED
+    # ========================================================
+
+    else:
+
+        raise ValueError(
+            "Unsupported input format. "
+            "Only .csv and .json are supported."
+        )
 
 
 def parse_response(output):
@@ -211,7 +300,7 @@ def main():
 
         print(f"\n===== Sample {i+1} =====")
         print(f"Behavior: {behavior}")
-        print(f"Ground Truth: {label}")
+        
         
         if "gemini" in model_name:
             response = call_gemini(
@@ -235,41 +324,48 @@ def main():
         if parsed.get("technique") == []:
             parsed = {
                         "technique": ["Needs Review"],
-                        "confidence": 0.0,
                         "reasoning": "insufficient evidence"
                       }
             
 
         prediction = parsed["technique"]
-        confidence = parsed["confidence"]
         reasoning = parsed["reasoning"]
         
-        print(f"LLM Output: {prediction}")
+        
+        
+        if (args.input.endswith(".csv")):
 
-        res = evaluate_pred_list(prediction, label)
+            res = evaluate_pred_list(prediction, label)
+            print(f"Ground Truth: {label}")
+            print(f"Evaluation: {res}")
 
-        print(f"Evaluation: {res}")
+            if res != "mismatch":
+                correct += 1
 
-        if res != "mismatch":
-            correct += 1
+            results.append({
+                "behavior": behavior,
+                "ground_truth": label,
+                "prediction": prediction,
+                "reasoning": reasoning,
+                "evaluation": res
+            })
+            
+        elif (args.input.endswith(".json")):
+            results.append({
+                "behavior": behavior,
+                "technique_id": prediction,
+                "reasoning": reasoning
+            })
+            
+    if (args.input.endswith(".csv")):
+        total = len(data)
+        accuracy = correct / total if total > 0 else 0
 
-        results.append({
-            "behavior": behavior,
-            "ground_truth": label,
-            "prediction": prediction,
-            "confidence": confidence,
-            "reasoning": reasoning,
-            "evaluation": res
-        })
-
-    total = len(data)
-    accuracy = correct / total if total > 0 else 0
-
-    print("\n===== Summary =====")
-    print(f"Model: {model_name}")
-    print(f"Samples: {total}")
-    print(f"Correct: {correct}")
-    print(f"Accuracy: {accuracy:.2%}")
+        print("\n===== Summary =====")
+        print(f"Model: {model_name}")
+        print(f"Samples: {total}")
+        print(f"Correct: {correct}")
+        print(f"Accuracy: {accuracy:.2%}")
     
     save_results_json(results, args.output)
 

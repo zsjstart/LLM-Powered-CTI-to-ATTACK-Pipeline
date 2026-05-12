@@ -33,8 +33,6 @@ Behavior Extraction
    ↓
 Behavior Refinement
    ↓
-Behavior Deduplication
-   ↓
 MITRE ATT&CK Mapping
 ```
 
@@ -66,7 +64,8 @@ The extracted behaviors are refined per paragraph to:
 * remove attribution and narrative statements,
 * filter vague or non-operational behaviors,
 * reduce strategic or contextual noise,
-* preserve ATT&CK-relevant operational semantics.
+* preserve ATT&CK-relevant operational semantics,
+* remove duplicates
 
 
 #### Example: Paragraph-Level Refinement
@@ -92,13 +91,6 @@ Refined ATT&CK-oriented behaviors:
 ```
 
 This example illustrates how the refinement stage removes targeting information, geopolitical context, and narrative CTI content while preserving operationally meaningful ATT&CK-relevant adversary behaviors.
-
-
----
-
-### 4. Behavior Deduplication
-
-Highly similar or redundant behaviors are consolidated while preserving the most operationally meaningful representation.
 
 ---
 
